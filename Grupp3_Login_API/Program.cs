@@ -14,10 +14,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 🔹 Lägg till autentisering med JWT
 var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 
-if (string.IsNullOrEmpty(jwtKey))
+if (string.IsNullOrWhiteSpace(jwtKey))
 {
-    throw new InvalidOperationException("JWT Key is missing from configuration.");
+    Console.WriteLine("Varning: JWT Key saknas! Se till att miljövariabeln 'JWT_SECRET_KEY' är satt.");
+    throw new InvalidOperationException("JWT Key is missing from environment variables and configuration.");
 }
+
+var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
