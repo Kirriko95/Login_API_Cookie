@@ -99,5 +99,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers(); // ✅ Nu fungerar detta utan fel
-
 app.Run();

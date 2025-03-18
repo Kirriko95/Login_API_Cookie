@@ -23,7 +23,7 @@ namespace Grupp3_Login_API.Controllers
 
             if (string.IsNullOrEmpty(_jwtSecret))
             {
-                Console.WriteLine("⚠️ JWT_SECRET_KEY saknas! Kontrollera miljövariabler.");
+                Console.WriteLine("JWT_SECRET_KEY saknas! Kontrollera miljövariabler.");
                 throw new InvalidOperationException("JWT_SECRET_KEY is missing from environment variables.");
             }
         }
