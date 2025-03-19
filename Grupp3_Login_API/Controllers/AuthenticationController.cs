@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Grupp3_Login_API.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
+using BCrypt.Net;
+using System.Security.Claims;
 
 namespace Grupp3_Login_API.Controllers
 {
@@ -14,21 +14,13 @@ namespace Grupp3_Login_API.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly string _jwtSecret;
 
         public AuthenticationController(AppDbContext context)
         {
             _context = context;
-            _jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
-
-            if (string.IsNullOrEmpty(_jwtSecret))
-            {
-                Console.WriteLine("JWT_SECRET_KEY saknas! Kontrollera miljövariabler.");
-                throw new InvalidOperationException("JWT_SECRET_KEY is missing from environment variables.");
-            }
         }
 
-        // ✅ Inloggning: Genererar en JWT-token med användarens ID och roll
+        // ✅ Inloggning: Skapar en cookie
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -41,31 +33,37 @@ namespace Grupp3_Login_API.Controllers
                 return Unauthorized("Felaktigt användarnamn eller lösenord.");
             }
 
-            // Konvertera roll-ID till läsbar text
-            string roleName = user.Role?.RoleName ?? "User"; // Om ingen roll finns, sätt "User" som standard
-
-            // Skapa JWT-token
-            var key = Encoding.UTF8.GetBytes(_jwtSecret);
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), // ✅ Lägger till user.Id
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.Role, roleName) // ✅ Roller är nu läsbara istället för siffror
-                }),
-                Expires = DateTime.UtcNow.AddMinutes(60), // ✅ Konfigurerbar livslängd
-                Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "https://localhost:7200/",
-                Audience = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "https://localhost:7200",
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            // Skapa en lista med claims
+            var claims = new[] {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User") // Standardroll: User
             };
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var tokenString = tokenHandler.WriteToken(token);
+            // Skapa identity och autentisering cookie
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
 
-            return Ok(new { Token = tokenString, UserId = user.Id, Role = roleName });
+            // Logga in användaren och skapa en cookie
+            var properties = new AuthenticationProperties
+            {
+                // Se till att cookien skickas till andra domäner
+                IsPersistent = true, // För att cookien ska vara kvar vid efterföljande begärningar
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30) // Cookie-utgångstid
+            };
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
+
+            return Ok(new { Message = "Inloggad framgångsrikt.", Role = user.Role?.RoleName ?? "User" });
+
+        }
+
+        // Logout-metod för att ta bort cookie
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Ok(new { Message = "Utloggad framgångsrikt." });
         }
     }
 }
-

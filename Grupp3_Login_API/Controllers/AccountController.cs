@@ -39,7 +39,7 @@ namespace Grupp3_Login_API.Controllers
 
         // Admin kan skapa ett Employee-konto (Får automatiskt rollen "Employee")
         [HttpPost("create-employee")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")] // Endast admin kan skapa employee-konton
         public async Task<ActionResult<Account>> CreateEmployee([FromBody] Account account)
         {
             if (await _context.Accounts.AnyAsync(a => a.UserName == account.UserName))
@@ -58,7 +58,7 @@ namespace Grupp3_Login_API.Controllers
 
         // Hämta alla konton (Endast Admin)
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")] // Endast admin får hämta alla konton
         public async Task<ActionResult<IEnumerable<Account>>> GetAllAccounts()
         {
             return await _context.Accounts.ToListAsync();
@@ -66,7 +66,7 @@ namespace Grupp3_Login_API.Controllers
 
         // Admin: Uppdatera konto (Kräver att admin anger nuvarande lösenord)
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")] // Endast admin kan uppdatera konto
         public async Task<IActionResult> UpdateAccount(int id, [FromBody] UpdateAccountRequest request)
         {
             var existingAccount = await _context.Accounts.FindAsync(id);
@@ -98,7 +98,7 @@ namespace Grupp3_Login_API.Controllers
 
         // Admin: Ta bort ett konto
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")] // Endast admin kan ta bort konto
         public async Task<IActionResult> DeleteAccount(int id)
         {
             var account = await _context.Accounts.FindAsync(id);

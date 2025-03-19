@@ -1,102 +1,72 @@
 ﻿using Grupp3_Login_API.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 Lägg till databaskoppling
+// Lägg till databaskoppling
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔹 Lägg till autentisering med JWT
-var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+// Lägg till autentisering med cookie-baserad autentisering
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "YourAppNameCookie"; // Anpassa cookie-namnet
+        options.LoginPath = "/api/authentication/login"; // API-vänlig login-URL
+        options.LogoutPath = "/api/authentication/logout"; // API-vänlig logout-URL
+        options.SlidingExpiration = true; // Förlänger sessionen vid aktivitet
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(10); // Timeout efter 30 minuter
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Endast över HTTPS
+        options.Cookie.HttpOnly = true; // Förhindrar åtkomst via JavaScript
+        options.Cookie.SameSite = SameSiteMode.Strict; // Förhindrar CSRF
+    });
 
-if (string.IsNullOrWhiteSpace(jwtKey))
+// Lägg till CORS-policy
+builder.Services.AddCors(options =>
 {
-    Console.WriteLine("Varning: JWT Key saknas! Se till att miljövariabeln 'JWT_SECRET_KEY' är satt.");
-    throw new InvalidOperationException("JWT Key is missing from environment variables and configuration.");
-}
-
-var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    options.AddPolicy("AllowMvcOrigin", policy =>
     {
-        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-        options.SaveToken = true;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-    });
-
-builder.Services.AddAuthorization();
-
-// 🔹 Lägg till **Controllers**
-builder.Services.AddControllers(); // ✅ Denna måste finnas
-
-// 🔹 Lägg till Swagger med JWT-stöd
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Grupp3 Login API",
-        Version = "v1",
-        Description = "API för autentisering och konto-hantering"
-    });
-
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Ange ditt JWT-token i fältet. Exempel: Bearer <ditt-token>"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
-        }
+        policy.WithOrigins("http://localhost:7291")  // Lägg till din MVC-applikations URL
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();  // Tillåt cookies att skickas
     });
 });
 
+// Lägg till Controllers
+builder.Services.AddControllers(); // Denna måste finnas för att använda API:et
+
+// Lägg till Swagger för utveckling
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
-// 🔹 Aktivera Swagger
+// Aktivera Swagger för utveckling
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Grupp3 Login API v1");
-        c.RoutePrefix = string.Empty; // Gör att Swagger öppnas på root-URL
+        c.RoutePrefix = string.Empty; // Swagger öppnas på root-URL
     });
 }
 
 app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseCors("AllowSpecificOrigins"); // Använd CORS-policy
+app.UseAuthentication(); // Aktivera autentisering
+app.UseAuthorization(); // Aktivera auktorisering
 
-app.MapControllers(); // ✅ Nu fungerar detta utan fel
-app.Run();
+app.MapControllers(); // API-kontroller
+
+try
+{
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Fel vid app.Run(): {ex.Message}");
+    throw;
+}
