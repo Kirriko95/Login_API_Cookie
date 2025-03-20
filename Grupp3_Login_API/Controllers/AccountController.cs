@@ -57,23 +57,39 @@ namespace Grupp3_Login_API.Controllers
             account.Password = BCrypt.Net.BCrypt.HashPassword(account.Password);
             account.RoleId = 2; // Standardroll: "Employee"
 
+            account.Role = await _context.Roles.FindAsync(2);
+
+            if (account.Role == null)
+            {
+                return BadRequest("Rollen 'Employee' existerar inte i databasen");
+            }
+
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetAllAccounts), new { id = account.Id }, account);
         }
 
-        // Hämta alla konton (Endast Admin)
+        // Hämta alla konton (Endast Admin) Hämtar UserName och RoleName endast
         [HttpGet]
-        [Authorize(Roles = "Admin")] // Endast admin får hämta alla konton
-        public async Task<ActionResult<IEnumerable<Account>>> GetAllAccounts()
+        [Authorize(Roles = "Admin")] 
+        public async Task<ActionResult<IEnumerable<object>>> GetAllAccounts()
         {
-            return await _context.Accounts.ToListAsync();
+            var accounts = await _context.Accounts
+                .Include(a => a.Role)
+                .Select(a => new
+                {
+                    a.UserName,
+                    Role = a.Role.RoleName
+                })
+                .ToListAsync();
+
+            return Ok(accounts);
         }
 
-        // Admin: Uppdatera konto (Kräver att admin anger nuvarande lösenord)
+        // Admin: Uppdatera Konton
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")] // Endast admin kan uppdatera konto
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateAccount(int id, [FromBody] UpdateAccountRequest request)
         {
             var existingAccount = await _context.Accounts.FindAsync(id);
@@ -82,30 +98,30 @@ namespace Grupp3_Login_API.Controllers
                 return NotFound("Kontot hittades inte.");
             }
 
-            // Om lösenord ska uppdateras, verifiera nuvarande lösenord
+            // Uppdatera lösenord OM det skickas med
             if (!string.IsNullOrWhiteSpace(request.NewPassword))
             {
-                if (string.IsNullOrWhiteSpace(request.CurrentPassword) || !BCrypt.Net.BCrypt.Verify(request.CurrentPassword, existingAccount.Password))
-                {
-                    return BadRequest("Felaktigt nuvarande lösenord.");
-                }
-                existingAccount.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                existingAccount.Password =  BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             }
 
-            // Uppdatera användarnamn om det skickas med
+            // Uppdatera användarnamn OM det skickas med
             if (!string.IsNullOrWhiteSpace(request.NewUserName) && existingAccount.UserName != request.NewUserName)
             {
+                if (await _context.Accounts.AnyAsync(a => a.UserName == request.NewUserName))
+                {
+                    return BadRequest("Användarnamnet är redan taget.");
+                }
+
                 existingAccount.UserName = request.NewUserName;
             }
 
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
 
         // Admin: Ta bort ett konto
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")] // Endast admin kan ta bort konto
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> DeleteAccount(int id)
         {
             var account = await _context.Accounts.FindAsync(id);
