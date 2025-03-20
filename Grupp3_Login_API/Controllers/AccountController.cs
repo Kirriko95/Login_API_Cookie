@@ -31,6 +31,13 @@ namespace Grupp3_Login_API.Controllers
             account.Password = BCrypt.Net.BCrypt.HashPassword(account.Password);
             account.RoleId = 3; // Standardroll: "User"
 
+            account.Role = await _context.Roles.FindAsync(3);
+
+            if (account.Role == null)
+            {
+                return BadRequest("Rollen 'User' existerar inte i databasen");
+            }
+
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync();
 
