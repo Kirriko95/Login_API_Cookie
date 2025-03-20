@@ -20,7 +20,7 @@ namespace Grupp3_Login_API.Controllers
             _context = context;
         }
 
-        // ✅ Inloggning: Skapar en cookie
+        // Inloggning: Skapar en cookie
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -40,11 +40,11 @@ namespace Grupp3_Login_API.Controllers
                 new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "User") // Standardroll: User
             };
 
+
             // Skapa identity och autentisering cookie
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
-            // Logga in användaren och skapa en cookie
             var properties = new AuthenticationProperties
             {
                 // Se till att cookien skickas till andra domäner
@@ -52,6 +52,7 @@ namespace Grupp3_Login_API.Controllers
                 ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30) // Cookie-utgångstid
             };
 
+            // Logga in och skapa cookie
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
 
             return Ok(new { Message = "Inloggad framgångsrikt.", Role = user.Role?.RoleName ?? "User" });
@@ -63,7 +64,8 @@ namespace Grupp3_Login_API.Controllers
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Ok(new { Message = "Utloggad framgångsrikt." });
+
+            return Ok(new { Message = "Utloggning lyckades." });
         }
     }
 }

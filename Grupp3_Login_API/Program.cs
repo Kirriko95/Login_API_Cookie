@@ -1,6 +1,7 @@
 ﻿using Grupp3_Login_API.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,27 +13,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.Cookie.Name = "YourAppNameCookie"; // Anpassa cookie-namnet
-        options.LoginPath = "/api/authentication/login"; // API-vänlig login-URL
-        options.LogoutPath = "/api/authentication/logout"; // API-vänlig logout-URL
         options.SlidingExpiration = true; // Förlänger sessionen vid aktivitet
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(10); // Timeout efter 30 minuter
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Timeout efter 30 minuter
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Endast över HTTPS
         options.Cookie.HttpOnly = true; // Förhindrar åtkomst via JavaScript
-        options.Cookie.SameSite = SameSiteMode.Strict; // Förhindrar CSRF
+        options.Cookie.SameSite = SameSiteMode.None; // Kanske ändra till strict senare
     });
-
-// Lägg till CORS-policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowMvcOrigin", policy =>
-    {
-        policy.WithOrigins("http://localhost:7291")  // Lägg till din MVC-applikations URL
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();  // Tillåt cookies att skickas
-    });
-});
 
 // Lägg till Controllers
 builder.Services.AddControllers(); // Denna måste finnas för att använda API:et
@@ -40,6 +26,18 @@ builder.Services.AddControllers(); // Denna måste finnas för att använda API:
 // Lägg till Swagger för utveckling
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Ska i produktion ändras med restriktioner
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder
+            .AllowAnyOrigin()  
+            .AllowAnyMethod()  
+            .AllowAnyHeader()  
+    );
+});
+
 
 var app = builder.Build();
 
@@ -55,10 +53,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowSpecificOrigins"); // Använd CORS-policy
+
+app.UseCors("AllowAll");
+
 app.UseAuthentication(); // Aktivera autentisering
 app.UseAuthorization(); // Aktivera auktorisering
-
 app.MapControllers(); // API-kontroller
 
 try
