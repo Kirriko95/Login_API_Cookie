@@ -260,8 +260,20 @@ public class HomeController : Controller
 ## Autentisering & Auktorisering
 
 - **Autentisering:** Användare loggar in via `POST /api/Authentication/login` och får en **cookie** vid lyckad inloggning. Cookien innehåller en token för auktorisering.
-- Cookie varar i 30 minuter, vidare anropp förnyar sessionen, men det kan behövas ytterliggare kod om den ska förlängas utan ytterliggare anropp till API:et.
-- Anroppas `POST /api/Authentication/logout` kommer cookien finns kvar tiden ut, men tokenen är inte längre tiltig.
+- Cookie varar i 30 minuter, vidare anropp förnyar sessionen, men det kan behövas kod från ert håll om den ska förlängas utan ytterliggare anropp till API:et. Tips är att skapa en **MIddleware** lösning i **program.cs** som kollar om användaren är admin och uppdaterar cookien vid varje request. Dessa request kan vara t.ex. när du:
+- ✅ Navigerar till en Admin-view
+- ✅ Gör en CRUD-operation i Admin-kontroller
+
+### 🍪 **Sammanfattning: Förnyelse av Cookie**  
+
+| Lösning | När ska den användas? | Hur fungerar den? |
+|---------|------------------------|-------------------|
+| ✅ Middleware i `Program.cs` | **Vid varje request där Admin är aktiv i MVC** | Förnyar cookien automatiskt om Admin gör något i MVC-projektet |
+| ✅ `[Authorize(Roles = "Admin")]` | **Skyddar Admin-sidor & metoder i MVC** | Cookien förnyas när Admin använder dessa |
+| ❌ Inaktivitet > 30 min (eller annan intervall, ni avgör själva) | **Användaren loggas ut** | Om Admin inte gör något, cookien går ut |
+
+
+- Anroppas `POST /api/Authentication/logout` kommer du loggas ut och cookien tas bort.
   
 - **Auktorisering:** Cookien används i efterföljande API-anrop för att identifiera användaren och dess roll. Flera av metoderna kräver att cookien med en **admin-token** skickas med för att de ska kunna konsumeras.
 
