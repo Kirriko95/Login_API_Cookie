@@ -6,16 +6,14 @@ Det här API:et kan ni använda för autentisering och kontohantering. Detta API
 2. [Konfiguration i MVC-projekt](#konfiguration-i-mvc-projekt)
 3. [Autentisering & Auktorisering](#autentisering--auktorisering)
 4. [API-endpoints](#api-endpoints)
-   - [Autentisering](#autentisering)
-   - [Kontohantering](#kontohantering)
-5. [Exempel på API-anrop](#felhantering)
+5. [Exempel på API-anrop](#exempel-på-api-anrop)
 6. [Kontakt](#kontakt)
 
 ---
 
-## 👋 **Introduktion**
+## Introduktion
 
-Detta API är utvecklat för att hantera inloggning och kontohantering via en ASP.NET Core MVC-klient. API:et hanterar **cookie-baserad autentisering**, där en **cookie** returneras efter lyckad inloggning och används för efterföljande API-anrop.
+👋 Detta API är utvecklat för att hantera inloggning och kontohantering via en ASP.NET Core MVC-klient. API:et hanterar **cookie-baserad autentisering**, där en **cookie** returneras efter lyckad inloggning och används för efterföljande API-anrop.
 
 API:et kommer att **hostas på högskolans server**, och du kan konsumera det utan att klona källkoden.
 
@@ -23,9 +21,9 @@ API:et kommer att **hostas på högskolans server**, och du kan konsumera det ut
 
 ---
 
-## ⚙️ **Konfiguration i MVC-projekt**
+## Konfiguration i MVC-projekt
 
-Innan du anropar API:et behöver du säkerställa att ditt MVC-projekt är konfigurerat korrekt för autentisering och att hantera cookies.
+⚙️ Innan du anropar API:et behöver du säkerställa att ditt MVC-projekt är konfigurerat korrekt för autentisering och att hantera cookies.
 
 ### 1️⃣ **Lägg till nödvändiga paket**
 📦 Se till att du har dessa paket installerade i ditt MVC-projekt:
@@ -259,28 +257,29 @@ public class HomeController : Controller
 ```
 ---
 
-## 🔐 **Autentisering & Auktorisering**
+## Autentisering & Auktorisering
+
 - **Autentisering:** Användare loggar in via `POST /api/Authentication/login` och får en **cookie** vid lyckad inloggning. Cookien innehåller en token för auktorisering.
 - Cookie varar i 30 minuter, vidare anropp förnyar sessionen, men det kan behövas ytterliggare kod om den ska förlängas utan ytterliggare anropp till API:et.
 - Anroppas `POST /api/Authentication/logout` kommer cookien finns kvar tiden ut, men tokenen är inte längre tiltig.
   
 - **Auktorisering:** Cookien används i efterföljande API-anrop för att identifiera användaren och dess roll. Flera av metoderna kräver att cookien med en **admin-token** skickas med för att de ska kunna konsumeras.
 
-### **API:et stöder följande roller:**
+### **API:et stödjer följande roller:**
 - **Admin** - Fullständig åtkomst till kontohantering.
 - **Employee** - Kan hantera viss data.
 - **User** - Kan endast hantera sitt eget konto.
 
 ---
 
-## 🔌 **API-endpoints**
-### 🔑 **Autentisering**
+## API-endpoints
+### 🔌🔑 **Autentisering**
 | Metod | Endpoint | Beskrivning |
 |-------|---------|-------------|
 | `POST` | `/api/Authentication/login` | Logga in och få en cookie |
 | `POST` | `/api/Authentication/logout` | Logga ut och rensa cookie |
 
-## 👥 **Kontohantering**
+## 👥🔐 **Kontohantering**
 | Metod | Endpoint | Beskrivning |
 |-------|---------|-------------|
 | `GET` | `/api/Account` | Hämta alla konton (Endast Admin) |
@@ -291,7 +290,7 @@ public class HomeController : Controller
 
 ---
 
-## 📌 **Exempel på API-anrop**
+## Exempel på API-anrop
 ### 🔑 **Logga in som Admin**
 ```http
 POST /api/Auth/login
@@ -363,8 +362,9 @@ Om en användare utan Admin-roll försöker besöka /Home/AdminPanel, kommer de 
 
 ## **Kontakt**
 
-💻 Ni kan enklast nå mig **Adam Karlsson** på **Discord**.
-
+💻 Ni kan enklast kontakta mig **Adam Karlsson** på **Discord**.
 Lägg till mig @ **Kirriko#1242**
 
-Annars ses vi på skolan på integrationsmöten eller SOA-workshops
+🎨 Eller på **Canvas** 
+
+🏫 Annars ses vi på skolan på integrationsmöten eller SOA-workshops
