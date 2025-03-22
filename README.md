@@ -305,7 +305,7 @@ public class HomeController : Controller
 ## Exempel på API-anrop
 ### 🔑 **Logga in som Admin**
 ```http
-POST /api/Auth/login
+POST /api/Authentication/login
 ```
 📥 Request Body (JSON)
 ➡️ Skicka inloggningsuppgifter till API:et
