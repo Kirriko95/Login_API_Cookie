@@ -30,11 +30,13 @@ builder.Services.AddSwaggerGen();
 // Ska i produktion ändras med restriktioner
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        builder => builder
-            .AllowAnyOrigin()  
-            .AllowAnyMethod()  
-            .AllowAnyHeader()  
+options.AddPolicy("AllowReactAndMVC",
+    builder => builder
+        .WithOrigins("http://localhost:5173", "https://localhost:5173")
+        .SetIsOriginAllowed(origin => new Uri(origin).Scheme == "http" || new Uri(origin).Scheme == "https")
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials()
     );
 });
 
@@ -54,7 +56,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.UseCors("AllowReactAndMVC");
 
 app.UseAuthentication(); // Aktivera autentisering
 app.UseAuthorization(); // Aktivera auktorisering
