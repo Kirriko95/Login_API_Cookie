@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Lägg till databaskoppling
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Lägg till autentisering med cookie-baserad autentisering
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
