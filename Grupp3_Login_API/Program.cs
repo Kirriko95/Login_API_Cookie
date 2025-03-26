@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Grupp3_Login_API.Data;
+using Microsoft.Extensions.ObjectPool;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,15 +11,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
+
 // Lägg till autentisering med cookie-baserad autentisering
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        options.Cookie.Name = "API_Cookie";
         options.SlidingExpiration = true; // Förlänger sessionen vid aktivitet
         options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Timeout efter 30 minuter
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Endast över HTTPS
         options.Cookie.HttpOnly = true; // Förhindrar åtkomst via JavaScript
-        options.Cookie.SameSite = SameSiteMode.None; // Kanske ändra till strict senare
+        options.Cookie.SameSite = SameSiteMode.None;// Kanske ändra till strict senare
     });
 
 // Lägg till Controllers
@@ -30,14 +35,11 @@ builder.Services.AddSwaggerGen();
 // Ska i produktion ändras med restriktioner
 builder.Services.AddCors(options =>
 {
-options.AddPolicy("AllowReactAndMVC",
+options.AddPolicy("AllowAll",
     builder => builder
-        .WithOrigins("http://localhost:5173", "https://localhost:5173")
-        .SetIsOriginAllowed(origin => new Uri(origin).Scheme == "http" || new Uri(origin).Scheme == "https")
+        .WithOrigins("https://localhost:7291", "https://localhost:53694")
         .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials()
-    );
+        .AllowAnyHeader());
 });
 
 
@@ -56,7 +58,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowReactAndMVC");
+app.UseCors("AllowAll");
 
 app.UseAuthentication(); // Aktivera autentisering
 app.UseAuthorization(); // Aktivera auktorisering

@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Grupp3_Login_API.Models;
+using Grupp3_Login_API.Data;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BCrypt.Net;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Grupp3_Login_API.Controllers
 {
@@ -47,76 +49,80 @@ namespace Grupp3_Login_API.Controllers
         // Admin kan skapa ett Employee-konto (Får automatiskt rollen "Employee")
         [HttpPost("create-employee")]
         [Authorize(Roles = "Admin")] // Endast admin kan skapa employee-konton
-        public async Task<ActionResult<Account>> CreateEmployee([FromBody] Account account)
+        public async Task<ActionResult<Account>> CreateEmployee(CreateAccountDto createAccountDto)
         {
-            if (await _context.Accounts.AnyAsync(a => a.UserName == account.UserName))
+            var newAccount = new Account
             {
-                return BadRequest("Användarnamnet är redan taget.");
-            }
+                UserName = createAccountDto.UserName,
+                Password = BCrypt.Net.BCrypt.HashPassword(createAccountDto.Password),
+                RoleId = 2
+            };
 
-            account.Password = BCrypt.Net.BCrypt.HashPassword(account.Password);
-            account.RoleId = 2; // Standardroll: "Employee"
-
-            account.Role = await _context.Roles.FindAsync(2);
-
-            if (account.Role == null)
-            {
-                return BadRequest("Rollen 'Employee' existerar inte i databasen");
-            }
-
-            _context.Accounts.Add(account);
+            _context.Accounts.Add(newAccount);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetAllAccounts), new { id = account.Id }, account);
+            return Ok(new { message = "Kontot skapades framgångsrikt." });
         }
+
 
         // Hämta alla konton (Endast Admin) Hämtar UserName och RoleName endast
         [HttpGet]
         [Authorize(Roles = "Admin")] 
-        public async Task<ActionResult<IEnumerable<object>>> GetAllAccounts()
+        public async Task<ActionResult> GetAllAccounts()
         {
-            var accounts = await _context.Accounts
-                .Include(a => a.Role)
+            var allAccounts = await _context.Accounts
+                .Where(a => a.Role.RoleName != "Admin")
                 .Select(a => new
                 {
+                    a.Id,
                     a.UserName,
                     Role = a.Role.RoleName
                 })
                 .ToListAsync();
-
-            return Ok(accounts);
+            
+            return Ok(allAccounts);
         }
-
-        // Admin: Uppdatera Konton
-        [HttpPut("{id}")]
+        // ✅ Hämta konto baserat på id
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateAccount(int id, [FromBody] UpdateAccountRequest request)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetAccountById(int id)
         {
-            var existingAccount = await _context.Accounts.FindAsync(id);
-            if (existingAccount == null)
+            var account = await _context.Accounts
+                .Include(a => a.Role)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (account == null)
             {
-                return NotFound("Kontot hittades inte.");
+                return NotFound(); // Om kontot inte finns
             }
 
-            // Uppdatera lösenord OM det skickas med
-            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            var accountView = new AccountView
             {
-                existingAccount.Password =  BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                Id = account.Id,
+                UserName = account.UserName,
+                Role = account.Role?.RoleName
+            };
+
+            return Ok(accountView);
+        }
+        // Admin: Uppdatera Konton
+        [HttpPut("update/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task <IActionResult> UpdateAccount(int id, UpdateAccountDto updateAccountDto)
+        {
+            var account = await _context.Accounts.FindAsync(id);
+
+            if (account == null)
+            {
+                return NotFound();
             }
 
-            // Uppdatera användarnamn OM det skickas med
-            if (!string.IsNullOrWhiteSpace(request.NewUserName) && existingAccount.UserName != request.NewUserName)
-            {
-                if (await _context.Accounts.AnyAsync(a => a.UserName == request.NewUserName))
-                {
-                    return BadRequest("Användarnamnet är redan taget.");
-                }
-
-                existingAccount.UserName = request.NewUserName;
-            }
+            account.UserName = updateAccountDto.UserName;
+            account.Password = BCrypt.Net.BCrypt.HashPassword(updateAccountDto.Password);
 
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            return Ok(new { message = "Kontot uppdaterades framgångsriklt." });
         }
 
         // Admin: Ta bort ett konto

@@ -6,6 +6,7 @@ using Grupp3_Login_API.Models;
 using System.Threading.Tasks;
 using BCrypt.Net;
 using System.Security.Claims;
+using Grupp3_Login_API.Data;
 
 namespace Grupp3_Login_API.Controllers
 {

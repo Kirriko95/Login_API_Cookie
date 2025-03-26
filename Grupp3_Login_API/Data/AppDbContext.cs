@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Grupp3_Login_API.Models;
 
-namespace Grupp3_Login_API.Models
+namespace Grupp3_Login_API.Data
 {
     public class AppDbContext : DbContext
     {

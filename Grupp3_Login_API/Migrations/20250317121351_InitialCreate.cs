@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Grupp3_Login_API.Data;
 
 #nullable disable
 
