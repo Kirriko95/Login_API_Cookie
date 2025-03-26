@@ -23,27 +23,20 @@ namespace Grupp3_Login_API.Controllers
 
         // Registrera ett nytt användarkonto (Får automatiskt rollen "User")
         [HttpPost("register")]
-        public async Task<ActionResult<Account>> RegisterUser([FromBody] Account account)
+        public async Task<ActionResult<Account>> Register(CreateAccountDto createAccountDto)
         {
-            if (await _context.Accounts.AnyAsync(a => a.UserName == account.UserName))
+            var newAccount = new Account
             {
-                return BadRequest("Användarnamnet är redan taget.");
-            }
+                UserName = createAccountDto.UserName,
+                Password = BCrypt.Net.BCrypt.HashPassword(createAccountDto.Password),
+                RoleId = 3
+            };
 
-            account.Password = BCrypt.Net.BCrypt.HashPassword(account.Password);
-            account.RoleId = 3; // Standardroll: "User"
-
-            account.Role = await _context.Roles.FindAsync(3);
-
-            if (account.Role == null)
-            {
-                return BadRequest("Rollen 'User' existerar inte i databasen");
-            }
-
-            _context.Accounts.Add(account);
+            _context.Accounts.Add(newAccount);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetAllAccounts), new { id = account.Id }, account);
+            return Ok(new { message = "Kontot skapades framgångsrikt" });
+            
         }
 
         // Admin kan skapa ett Employee-konto (Får automatiskt rollen "Employee")
